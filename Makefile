@@ -7,4 +7,8 @@ endif
 all: signalControl$(EXE)
 
 signalControl$(EXE): signalControl.go
-	go build signalControl
+	go build signalControl.go
+
+.PHONY: run
+run: signalControl$(EXE)
+	./signalControl
