@@ -17,3 +17,4 @@ clean:
 deps:
 	go get github.com/mattn/go-sqlite3
 	go get github.com/julienschmidt/httprouter
+	go get github.com/BurntSushi/toml

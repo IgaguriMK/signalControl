@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/BurntSushi/toml"
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -15,6 +16,8 @@ const VERSION = "0.1.0"
 var db *sql.DB
 
 func main() {
+	LodaConfig()
+
 	var err error
 	db, err = sql.Open("sqlite3", "./data.db")
 	if err != nil {
@@ -32,7 +35,7 @@ func main() {
 	router.GET("/section/:sectionName", GetSection)
 	router.POST("/section/:sectionName", PostSection)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(config.PortStr(), router))
 }
 
 func Home(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -129,4 +132,27 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	fmt.Printf("Post section: section[%s] = %s\n", sectionName, state)
+}
+
+type Config struct {
+	Server struct {
+		Port int `toml:"port"`
+	} `toml:"server"`
+}
+
+var config Config
+
+func LodaConfig() {
+	_, err := toml.DecodeFile("config.tml", &config)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (cfg *Config) PortStr() string {
+	if cfg.Server.Port == 80 {
+		return ""
+	} else {
+		return fmt.Sprintf(":%d", cfg.Server.Port)
+	}
 }
