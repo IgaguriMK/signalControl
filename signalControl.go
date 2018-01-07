@@ -16,7 +16,9 @@ const VERSION = "0.1.0"
 var db *sql.DB
 
 func main() {
-	LodaConfig()
+	log.SetFlags(log.Lshortfile)
+
+	LoadConfig()
 
 	var err error
 	db, err = sql.Open("sqlite3", "./data.db")
@@ -24,7 +26,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS section (name VARCHAR(255) PRIMARY KEY, state VARCHAR(255))`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS world (id INTEGER PRIMARY KEY, name VARCHAR(255))`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS section (id INTEGER PRIMARY KEY, world_id INTEGER, name VARCHAR(255), state VARCHAR(255))`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,8 +40,8 @@ func main() {
 	router.GET("/", Home)
 	router.GET("/version", Version)
 	router.ServeFiles("/client/*filepath", http.Dir("./client/"))
-	router.GET("/section/:sectionName", GetSection)
-	router.POST("/section/:sectionName", PostSection)
+	router.GET("/world/:worldName/section/:sectionName", GetSection)
+	router.POST("/world/:worldName/section/:sectionName", PostSection)
 
 	log.Fatal(http.ListenAndServe(config.PortStr(), router))
 }
@@ -54,9 +61,18 @@ func Version(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func GetSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	worldName := ps.ByName("worldName")
 	sectionName := ps.ByName("sectionName")
 
-	rows, err := db.Query(`SELECT state FROM section WHERE name=?`, sectionName)
+	rows, err := db.Query(
+		`SELECT s.state
+			FROM section s
+			INNER JOIN world w
+			ON s.world_id = w.id
+			WHERE w.name=? AND s.name=?`,
+		worldName,
+		sectionName,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,6 +94,7 @@ func GetSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	worldName := ps.ByName("worldName")
 	sectionName := ps.ByName("sectionName")
 	state := r.PostFormValue("state")
 
@@ -86,7 +103,23 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		log.Fatal(err)
 	}
 
-	rows, err := tx.Query(`SELECT state FROM section WHERE name=?`, sectionName)
+	worlds, err := tx.Query(`SELECT id FROM world WHERE name=?`, worldName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !worlds.Next() {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(w, "Not Found")
+		return
+	}
+
+	var worldId int
+	err = worlds.Scan(&worldId)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := tx.Query(`SELECT state FROM section WHERE world_id=? AND name=? `, worldId, sectionName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,7 +147,7 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			return
 		}
 	} else {
-		_, err = tx.Exec(`INSERT INTO section (name, state) VALUES (?, ?)`, sectionName, state)
+		_, err = tx.Exec(`INSERT INTO section (world_id, name, state) VALUES (?, ?, ?)`, worldId, sectionName, state)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintln(w, "Update failed")
@@ -143,7 +176,7 @@ type Config struct {
 
 var config Config
 
-func LodaConfig() {
+func LoadConfig() {
 	_, err := toml.DecodeFile("config.tml", &config)
 	if err != nil {
 		log.Fatal(err)
