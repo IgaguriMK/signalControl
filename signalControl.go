@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/julienschmidt/httprouter"
@@ -16,11 +17,17 @@ const VERSION = "0.1.0"
 var db *sql.DB
 
 func main() {
+	logf, err := os.OpenFile("mcsignal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetOutput(logf)
 	log.SetFlags(log.Lshortfile)
+
+	log.Println("---- launch ----")
 
 	LoadConfig()
 
-	var err error
 	db, err = sql.Open("sqlite3", "./data.db")
 	if err != nil {
 		log.Fatal(err)
