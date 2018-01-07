@@ -32,6 +32,7 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", Home)
 	router.GET("/version", Version)
+	router.ServeFiles("/client/*filepath", http.Dir("./client/"))
 	router.GET("/section/:sectionName", GetSection)
 	router.POST("/section/:sectionName", PostSection)
 
