@@ -32,6 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.SetMaxOpenConns(1)
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS world (id INTEGER PRIMARY KEY, name VARCHAR(255))`)
 	if err != nil {
