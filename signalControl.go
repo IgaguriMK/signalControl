@@ -84,7 +84,7 @@ func GetSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	defer rows.Close()
 	if !rows.Next() {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintln(w, "Not Found")
@@ -115,6 +115,7 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer worlds.Close()
 	if !worlds.Next() {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintln(w, "Not Found")
@@ -132,7 +133,9 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		log.Fatal(err)
 	}
 
-	if rows.Next() {
+	hasSection := rows.Next()
+	rows.Close()
+	if hasSection {
 		var oldState string
 		err = rows.Scan(&oldState)
 		if err != nil {
