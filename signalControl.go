@@ -134,13 +134,13 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	hasSection := rows.Next()
-	rows.Close()
 	if hasSection {
 		var oldState string
 		err = rows.Scan(&oldState)
 		if err != nil {
 			log.Fatal(err)
 		}
+		rows.Close()
 
 		if oldState != "" && state != "" {
 			w.WriteHeader(http.StatusConflict)
@@ -158,6 +158,7 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			return
 		}
 	} else {
+		rows.Close()
 		_, err = tx.Exec(`INSERT INTO section (world_id, name, state) VALUES (?, ?, ?)`, worldId, sectionName, state)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
