@@ -176,6 +176,8 @@ func PostSection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		tx.Rollback()
 	}
 
+	fmt.Fprint(w, "Success")
+
 	fmt.Printf("Post section: section[%s] = %s\n", sectionName, state)
 }
 
